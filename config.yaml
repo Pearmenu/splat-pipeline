@@ -1,0 +1,32 @@
+# Tunable parameters for the splat pipeline. Sane defaults for a turntable dish.
+
+frames:
+  fps: 3              # frames per second to extract from the video
+  max_frames: 150     # hard cap (uniformly subsampled if exceeded)
+  blur_threshold: 40.0  # min Laplacian variance; frames below are discarded as blurry
+
+mask:
+  model: birefnet-general  # rembg model: birefnet-general | isnet-general-use | u2net
+  erode_px: 2              # shrink the mask to kill edge fringe/halo
+  min_area_ratio: 0.02     # discard frame if the subject covers less than this
+
+sfm:
+  use_glomap: true         # GLOMAP mapper (fast). false => colmap mapper (slower)
+  camera_model: OPENCV
+  matcher: sequential      # sequential (video frames) | exhaustive (robust, slower)
+
+train:
+  iters: 15000
+  cap_max: 300000          # MCMC gaussian budget (final file size scales with this)
+  sh_degree: 3
+  data_factor: 1           # downscale factor for training images (1 = full res)
+
+cleanup:
+  opacity_min: 0.10        # drop gaussians more transparent than this
+  scale_max_pct: 99.5      # drop gaussians larger than this percentile (kills blobs)
+  bbox_pct: [1.0, 99.0]    # spatial crop to this percentile box (kills far floaters)
+  knn_k: 16                # neighbors for statistical outlier removal
+  knn_std: 2.0             # drop points whose mean kNN distance > mean + std*this
+
+export:
+  formats: [splat, ply]    # both produced; .splat is the canonical menu asset

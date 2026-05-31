@@ -1,0 +1,32 @@
+# Self-contained RunPod serverless image — builds straight from this repo with no
+# pre-built base, so RunPod's GitHub integration can build it for you (no local
+# Docker / no CUDA build on your Mac needed).
+#
+# Build context must be the splat-pipeline/ root:
+#   docker build -f serverless/Dockerfile.serverless -t pear-splat-serverless .
+# Or point a RunPod Serverless endpoint at this repo + this Dockerfile path.
+FROM pytorch/pytorch:2.4.0-cuda12.1-cudnn9-devel
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PIP_NO_CACHE_DIR=1 \
+    GSPLAT_DIR=/opt/gsplat
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        git wget ffmpeg libgl1 libglib2.0-0 build-essential ninja-build \
+    && rm -rf /var/lib/apt/lists/*
+
+# COLMAP + GLOMAP (CUDA builds from conda-forge).
+RUN conda install -y -c conda-forge colmap glomap && conda clean -afy
+
+COPY requirements.txt /tmp/requirements.txt
+RUN pip install -r /tmp/requirements.txt \
+    && pip install gsplat runpod requests
+
+# gsplat example trainer (simple_trainer.py -> MCMC strategy).
+RUN git clone --depth 1 https://github.com/nerfstudio-project/gsplat ${GSPLAT_DIR} \
+    && pip install -r ${GSPLAT_DIR}/examples/requirements.txt || true
+
+WORKDIR /workspace
+COPY . /workspace
+
+CMD ["python", "/workspace/serverless/handler.py"]

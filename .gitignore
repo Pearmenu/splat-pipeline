@@ -1,0 +1,17 @@
+# data / outputs
+data/
+*.mp4
+*.mov
+*.m4v
+*.webm
+*.splat
+*.ply
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# os
+.DS_Store
