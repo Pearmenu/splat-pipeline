@@ -29,15 +29,23 @@ echo "[3/4] Python deps (uses the pod's preinstalled torch/CUDA)…"
 pip install -r requirements.txt
 pip install gsplat
 
-echo "[4/4] gsplat example trainer (simple_trainer.py)…"
-git clone --depth 1 https://github.com/nerfstudio-project/gsplat /opt/gsplat || true
-pip install -r /opt/gsplat/examples/requirements.txt || true
+echo "[4/4] gsplat example trainer (matching version, simple_trainer.py)…"
+# Clone the examples at the SAME tag as the installed gsplat, so simple_trainer.py
+# matches the library API. Fall back to main if the tag isn't found.
+GSV=$(python -c "import gsplat; print(gsplat.__version__)" 2>/dev/null || echo "")
+rm -rf /opt/gsplat
+git clone --depth 1 --branch "v$GSV" https://github.com/nerfstudio-project/gsplat /opt/gsplat \
+  || git clone --depth 1 https://github.com/nerfstudio-project/gsplat /opt/gsplat
+# --no-build-isolation so packages whose setup.py imports torch at build time
+# (ppisp, fused-ssim, fused-bilagrid) can see the already-installed torch instead
+# of failing in an isolated build env.
+pip install --no-build-isolation -r /opt/gsplat/examples/requirements.txt || true
 grep -q "GSPLAT_DIR" ~/.bashrc 2>/dev/null || echo "export GSPLAT_DIR=/opt/gsplat" >> ~/.bashrc
 export GSPLAT_DIR=/opt/gsplat
 
 echo
-colmap -h >/dev/null 2>&1 && echo "colmap OK" || echo "WARN: colmap não respondeu"
-glomap -h >/dev/null 2>&1 && echo "glomap OK" || echo "WARN: glomap não respondeu"
+command -v colmap >/dev/null && echo "colmap OK" || echo "WARN: colmap não encontrado no PATH"
+command -v glomap >/dev/null && echo "glomap OK" || echo "WARN: glomap não encontrado no PATH"
 echo
 echo "Setup done. Agora rode:"
 echo "  python pipeline.py --video data/prato.mp4 --workdir data/run"

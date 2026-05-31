@@ -22,9 +22,11 @@ COPY requirements.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt \
     && pip install gsplat runpod requests
 
-# gsplat example trainer (simple_trainer.py -> MCMC strategy).
-RUN git clone --depth 1 https://github.com/nerfstudio-project/gsplat ${GSPLAT_DIR} \
-    && pip install -r ${GSPLAT_DIR}/examples/requirements.txt || true
+# gsplat example trainer (simple_trainer.py -> MCMC strategy), matching version.
+RUN GSV=$(python -c "import gsplat; print(gsplat.__version__)") \
+    && (git clone --depth 1 --branch "v$GSV" https://github.com/nerfstudio-project/gsplat ${GSPLAT_DIR} \
+        || git clone --depth 1 https://github.com/nerfstudio-project/gsplat ${GSPLAT_DIR}) \
+    && pip install --no-build-isolation -r ${GSPLAT_DIR}/examples/requirements.txt || true
 
 WORKDIR /workspace
 COPY . /workspace

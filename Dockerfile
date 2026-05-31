@@ -21,8 +21,10 @@ RUN pip install -r /tmp/requirements.txt
 
 # gsplat (CUDA build) + its example trainer (simple_trainer.py provides the MCMC strategy).
 RUN pip install gsplat \
-    && git clone --depth 1 https://github.com/nerfstudio-project/gsplat ${GSPLAT_DIR} \
-    && pip install -r ${GSPLAT_DIR}/examples/requirements.txt || true
+    && GSV=$(python -c "import gsplat; print(gsplat.__version__)") \
+    && (git clone --depth 1 --branch "v$GSV" https://github.com/nerfstudio-project/gsplat ${GSPLAT_DIR} \
+        || git clone --depth 1 https://github.com/nerfstudio-project/gsplat ${GSPLAT_DIR}) \
+    && pip install --no-build-isolation -r ${GSPLAT_DIR}/examples/requirements.txt || true
 
 WORKDIR /workspace
 COPY . /workspace
