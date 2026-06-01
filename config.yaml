@@ -47,6 +47,6 @@ export:
   formats: [splat, ply]    # both produced; .splat is the canonical menu asset
   # Make the food pop (it comes out a bit flat/washed from 3DGS). 1.0 = no change.
   brightness: 1.05
-  contrast: 1.18
+  contrast: 1.08
   saturation: 1.35
-  opacity_boost: 6.0       # >1 makes gaussians more opaque (fixes the "see-through" food)
+  opacity_boost: 18.0      # >1 makes gaussians more opaque; >~12 = fully opaque
