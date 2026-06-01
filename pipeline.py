@@ -5,11 +5,20 @@ Runs six stages in order. Each stage reads/writes a shared work directory so
 you can resume from any stage with --from-stage for debugging.
 """
 import argparse
+import os
 import sys
 import time
 from pathlib import Path
 
 import yaml
+
+# Robustness for RunPod pods (the two foot-guns we hit):
+#  - colmap/glomap live in the micromamba prefix, not on the default PATH
+#  - GSPLAT_DIR may be unset in a fresh shell
+_TOOL_BIN = "/opt/splattools/bin"
+if os.path.isdir(_TOOL_BIN) and _TOOL_BIN not in os.environ.get("PATH", ""):
+    os.environ["PATH"] = os.environ.get("PATH", "") + os.pathsep + _TOOL_BIN
+os.environ.setdefault("GSPLAT_DIR", "/opt/gsplat")
 
 from stages import extract_frames, mask, sfm, train, cleanup, convert
 

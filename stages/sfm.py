@@ -28,7 +28,8 @@ def run(cfg, paths):
         "--ImageReader.mask_path", paths.masks,
         "--ImageReader.single_camera", 1,
         "--ImageReader.camera_model", scfg["camera_model"],
-        "--SiftExtraction.use_gpu", 1,
+        # NOTE: COLMAP uses the GPU for SIFT by default. Newer COLMAP builds
+        # (conda-forge 4.x) dropped the explicit --SiftExtraction.use_gpu flag.
     ])
 
     # 2. Matching. Sequential is ideal for video frames; exhaustive is more robust.
@@ -36,7 +37,7 @@ def run(cfg, paths):
         "sequential": "sequential_matcher",
         "exhaustive": "exhaustive_matcher",
     }[scfg["matcher"]]
-    _run(["colmap", matcher, "--database_path", db, "--SiftMatching.use_gpu", 1])
+    _run(["colmap", matcher, "--database_path", db])
 
     # 3. Mapping.
     sparse_root = paths.colmap / "sparse"

@@ -11,12 +11,18 @@ import cv2
 import numpy as np
 
 
-def _ffmpeg_extract(video: Path, out_dir: Path, fps: float):
+def _ffmpeg_extract(video: Path, out_dir: Path, fps: float, max_dim: int = 0):
     for f in out_dir.glob("*.png"):
         f.unlink()
+    vf = f"fps={fps}"
+    if max_dim and max_dim > 0:
+        # Downscale so the long edge <= max_dim (keeps aspect, even dimensions).
+        # Speeds up SfM + training a lot; quality impact on a dish is negligible.
+        vf += (f",scale='min({max_dim},iw)':'min({max_dim},ih)'"
+               f":force_original_aspect_ratio=decrease:force_divisible_by=2")
     cmd = [
         "ffmpeg", "-y", "-i", str(video),
-        "-vf", f"fps={fps}",
+        "-vf", vf,
         "-qscale:v", "2",
         str(out_dir / "frame_%04d.png"),
     ]
@@ -32,7 +38,7 @@ def _sharpness(img_path: Path) -> float:
 
 def run(cfg, paths):
     fcfg = cfg["frames"]
-    _ffmpeg_extract(paths.video, paths.raw_frames, fcfg["fps"])
+    _ffmpeg_extract(paths.video, paths.raw_frames, fcfg["fps"], fcfg.get("max_dim", 0))
 
     frames = sorted(paths.raw_frames.glob("*.png"))
     if not frames:

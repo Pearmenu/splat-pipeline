@@ -29,6 +29,23 @@ echo "[3/4] Python deps (uses the pod's preinstalled torch/CUDA)…"
 pip install -r requirements.txt
 pip install gsplat
 
+# Make rembg masking run on the GPU (CPU is ~40x slower: 67 min vs <1 min).
+# The CPU onnxruntime build shadows the CUDA provider, so keep only the GPU one,
+# and expose torch's bundled CUDA/cuDNN libs so ORT can load the CUDA provider.
+echo "    configurando masking na GPU (onnxruntime-gpu)…"
+pip uninstall -y onnxruntime >/dev/null 2>&1 || true
+python -c "import onnxruntime" 2>/dev/null || pip install onnxruntime-gpu
+NVLIB=$(python - <<'PY' 2>/dev/null || true
+import os, glob, nvidia
+print(":".join(glob.glob(os.path.join(os.path.dirname(nvidia.__file__), "*", "lib"))))
+PY
+)
+TORCHLIB=$(python -c "import os,torch;print(os.path.join(os.path.dirname(torch.__file__),'lib'))" 2>/dev/null || echo "")
+LDADD="${NVLIB}:${TORCHLIB}"
+grep -q "# splat-cuda-libs" ~/.bashrc 2>/dev/null \
+  || echo "export LD_LIBRARY_PATH=\"${LDADD}:\${LD_LIBRARY_PATH:-}\" # splat-cuda-libs" >> ~/.bashrc
+export LD_LIBRARY_PATH="${LDADD}:${LD_LIBRARY_PATH:-}"
+
 echo "[4/4] gsplat example trainer (matching version, simple_trainer.py)…"
 # Clone the examples at the SAME tag as the installed gsplat, so simple_trainer.py
 # matches the library API. Fall back to main if the tag isn't found.

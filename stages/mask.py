@@ -13,11 +13,23 @@ import cv2
 import numpy as np
 from PIL import Image
 from rembg import new_session, remove
+from tqdm import tqdm
 
 
 def run(cfg, paths):
     mcfg = cfg["mask"]
-    session = new_session(mcfg["model"])
+    # Prefer the GPU — BiRefNet on CPU is ~40s/frame; on GPU it's <1s/frame.
+    # If onnxruntime can't load the CUDA provider it silently falls back to CPU.
+    providers = (["CUDAExecutionProvider", "CPUExecutionProvider"]
+                 if mcfg.get("use_gpu", True) else ["CPUExecutionProvider"])
+    session = new_session(mcfg["model"], providers=providers)
+    try:
+        active = session.inner_session.get_providers()
+        print(f"   rembg providers ativos: {active}")
+        if "CUDAExecutionProvider" not in active:
+            print("   ⚠️  recorte na CPU (lento). Verifique onnxruntime-gpu/LD_LIBRARY_PATH.")
+    except Exception:
+        pass
     erode = int(mcfg["erode_px"])
     min_area = float(mcfg["min_area_ratio"])
 
@@ -27,7 +39,7 @@ def run(cfg, paths):
 
     frames = sorted(paths.raw_frames.glob("*.png"))
     kept = 0
-    for f in frames:
+    for f in tqdm(frames, desc="   mask", unit="frame"):
         rgba = remove(Image.open(f).convert("RGB"), session=session)  # PIL RGBA
         rgba = np.asarray(rgba)
         rgb, alpha = rgba[..., :3], rgba[..., 3]

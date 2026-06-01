@@ -4,6 +4,11 @@ A qualidade do `.splat` é decidida aqui. 5 minutos montando direito valem mais 
 qualquer ajuste depois. O alvo: cobrir o prato de **todos os ângulos**, com foco
 nítido, fundo liso e luz constante.
 
+> ⚠️ **LIÇÃO DO 1º TESTE:** o modelo saiu **achatado** (uma panqueca) porque a câmera
+> girou numa **só altura**. O 3DGS só reconstrói o que a câmera viu de vários ângulos.
+> Pra ter VOLUME e ALTURA, é **obrigatório filmar de 3 alturas diferentes** (de cima,
+> meio e rasante). Isso é o item mais importante deste guia — não pule.
+
 ## Montagem
 
 - **Bandeja giratória** (dessas de bolo / "lazy susan") com o prato no centro.
