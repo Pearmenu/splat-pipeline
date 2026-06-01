@@ -2,7 +2,9 @@
 # gsplat is installed separately in the Dockerfile (needs CUDA toolchain to build).
 
 rembg==2.0.59
-onnxruntime-gpu
+# Pin to a build that matches the pod's CUDA 12.x + cuDNN 9 (torch 2.4). The latest
+# onnxruntime-gpu (1.26) needs newer CUDA and fails to load -> masking falls over.
+onnxruntime-gpu==1.19.2
 opencv-python-headless
 numpy<2
 scipy
