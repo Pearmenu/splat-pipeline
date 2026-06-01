@@ -4,7 +4,7 @@ frames:
   fps: 3              # frames per second to extract from the video
   max_frames: 150     # hard cap (uniformly subsampled if exceeded)
   blur_threshold: 40.0  # min Laplacian variance; frames below are discarded as blurry
-  max_dim: 1600       # downscale long edge to this (0 = keep original). Big speedup.
+  max_dim: 1920       # train at full 1080p source res for finer gaussians (prod = sharper)
 
 mask:
   mode: birefnet           # birefnet (AI saliency, drops the plate) | chroma (keep plate)
@@ -47,6 +47,6 @@ export:
   formats: [splat, ply]    # both produced; .splat is the canonical menu asset
   # Make the food pop (it comes out a bit flat/washed from 3DGS). 1.0 = no change.
   brightness: 1.05
-  contrast: 1.08
-  saturation: 1.35
-  opacity_boost: 18.0      # >1 makes gaussians more opaque; >~12 = fully opaque
+  contrast: 1.05           # matched to production (natural, not punchy)
+  saturation: 1.05         # production sits at ~0.44 sat; 1.35 was over-saturated
+  opacity_boost: 8.0       # -> alpha median ~225, matching the production splats
