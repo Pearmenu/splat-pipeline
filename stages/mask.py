@@ -40,6 +40,17 @@ def _clean_binary(binary, mcfg):
         holes = (ff == 0).astype(np.uint8)         # what's still 0 = interior holes
         binary = (binary | holes).astype(np.uint8)
 
+    if mcfg.get("convex_hull", False):
+        # A plate is convex: take the convex hull of the biggest blob to fill ALL
+        # holes (glossy reflections) and smooth the ragged SAM boundary into a clean
+        # plate outline. Robust to SAM dropping interior/reflection patches.
+        cnts, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        if cnts:
+            hull = cv2.convexHull(max(cnts, key=cv2.contourArea))
+            out = np.zeros_like(binary)
+            cv2.fillConvexPoly(out, hull, 1)
+            binary = out
+
     dilate_px = int(mcfg.get("dilate_px", 0))
     if dilate_px > 0:
         k = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (dilate_px * 2 + 1,) * 2)
