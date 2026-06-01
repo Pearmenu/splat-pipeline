@@ -24,11 +24,18 @@ train:
   data_factor: 1           # downscale factor for training images (1 = full res)
 
 cleanup:
-  opacity_min: 0.08        # drop gaussians more transparent than this
-  scale_max_pct: 99.5      # drop gaussians larger than this percentile (kills blobs)
-  bbox_pct: [0.5, 99.5]    # spatial crop to this percentile box (kills far floaters)
+  # The background/turntable is already gone (masked black), so cleanup only needs
+  # to kill stray floaters/fog — NOT crop the object. Keep it gentle so the PLATE
+  # under the food survives (its flat rim sits at the spatial extremes).
+  opacity_min: 0.05        # drop gaussians more transparent than this
+  scale_max_pct: 99.9      # drop gaussians larger than this percentile (kills blobs)
+  bbox_pct: [0.1, 99.9]    # very gentle spatial crop (keeps the plate rim)
   knn_k: 16                # neighbors for statistical outlier removal
-  knn_std: 2.5             # drop points whose mean kNN distance > mean + std*this
+  knn_std: 3.0             # drop points whose mean kNN distance > mean + std*this
 
 export:
   formats: [splat, ply]    # both produced; .splat is the canonical menu asset
+  # Make the food pop (it comes out a bit flat/washed from 3DGS). 1.0 = no change.
+  brightness: 1.05
+  contrast: 1.18
+  saturation: 1.35

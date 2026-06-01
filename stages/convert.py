@@ -21,7 +21,19 @@ def _sigmoid(x):
     return 1.0 / (1.0 + np.exp(-x))
 
 
-def ply_to_splat(ply_path, splat_path):
+def _adjust_color(rgb, brightness=1.0, contrast=1.0, saturation=1.0):
+    """Make the food pop: brightness, then contrast around mid-gray, then saturation."""
+    if brightness != 1.0:
+        rgb = rgb * brightness
+    if contrast != 1.0:
+        rgb = (rgb - 0.5) * contrast + 0.5
+    if saturation != 1.0:
+        lum = (rgb * np.array([0.299, 0.587, 0.114], dtype=np.float32)).sum(axis=1, keepdims=True)
+        rgb = lum + (rgb - lum) * saturation
+    return rgb
+
+
+def ply_to_splat(ply_path, splat_path, brightness=1.0, contrast=1.0, saturation=1.0):
     v = PlyData.read(str(ply_path))["vertex"]
 
     xyz = np.stack([v["x"], v["y"], v["z"]], axis=1).astype(np.float32)
@@ -31,7 +43,8 @@ def ply_to_splat(ply_path, splat_path):
     quat /= np.linalg.norm(quat, axis=1, keepdims=True) + 1e-9
 
     f_dc = np.stack([v["f_dc_0"], v["f_dc_1"], v["f_dc_2"]], axis=1).astype(np.float32)
-    rgb = np.clip(0.5 + SH_C0 * f_dc, 0.0, 1.0)
+    rgb = 0.5 + SH_C0 * f_dc
+    rgb = np.clip(_adjust_color(rgb, brightness, contrast, saturation), 0.0, 1.0)
     alpha = _sigmoid(v["opacity"].astype(np.float32))
     rgba = np.clip(np.concatenate([rgb, alpha[:, None]], axis=1) * 255, 0, 255).astype(np.uint8)
 
@@ -54,10 +67,16 @@ def ply_to_splat(ply_path, splat_path):
 
 
 def run(cfg, paths):
-    formats = cfg["export"]["formats"]
+    ecfg = cfg["export"]
+    formats = ecfg["formats"]
 
     if "splat" in formats:
-        n = ply_to_splat(paths.clean_ply, paths.out_splat)
+        n = ply_to_splat(
+            paths.clean_ply, paths.out_splat,
+            brightness=ecfg.get("brightness", 1.0),
+            contrast=ecfg.get("contrast", 1.0),
+            saturation=ecfg.get("saturation", 1.0),
+        )
         mb = paths.out_splat.stat().st_size / 1e6
         print(f"   wrote {paths.out_splat.name}: {n} gaussians, {mb:.1f} MB")
 
