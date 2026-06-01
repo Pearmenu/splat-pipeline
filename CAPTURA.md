@@ -10,7 +10,7 @@ nítido, fundo liso e luz constante.
 > meio e rasante). Isso é o item mais importante deste guia — não pule.
 
 ## Ajustes do iPhone (Ajustes → Câmera, uma vez)
-- **Gravar Vídeo: 1080p HD a 30 fps** (4K é desperdício — a esteira reduz p/ 1600px).
+- **Gravar Vídeo: 4K a 30 fps** (a nitidez da produção vem da resolução; 1080p borra).
 - **Formatos → "Mais Compatível"** (H.264, evita o HEVC do iPhone).
 - **Vídeo HDR / Dolby Vision: DESLIGADO.**
 - **Grade: LIGADA.** · **Lens Correction: LIGADA.**
@@ -25,8 +25,10 @@ nítido, fundo liso e luz constante.
 
 - **Bandeja giratória** (dessas de bolo / "lazy susan") com o prato no centro.
 - **Câmera fixa** num tripé, apontada pro prato. Quem gira é o prato, não a câmera.
-- **Fundo liso e fosco**: papel/tecido **preto ou verde** atrás e embaixo. Sem
-  toalha estampada, sem reflexo, sem bagunça no fundo.
+- **Fundo + base VERDE, liso e fosco** (papel/feltro/TNT verde atrás E embaixo). ⚠️ Use
+  VERDE (não cinza/preto): o prato é azul e a comida não tem verde, então o recorte por
+  cor (`mask.mode: chroma`) remove só o verde e **mantém o prato** — que é o que faltava.
+  Sem estampa, sem reflexo, sem bagunça no fundo.
 - **Luz difusa e constante**: 2 luzes laterais (ou perto de uma janela com luz
   indireta). Evite flash, sol direto e sombra dura. Nada de luz piscando.
 
@@ -44,7 +46,8 @@ entre elas):
 Dicas:
 - **Devagar**: cada volta ~15–20 s. Giro rápido borra os frames.
 - **Câmera travada**: nada de zoom ou foco caçando no meio da volta. Trava o foco.
-- **4K** se puder, 1080p serve. Vídeo na horizontal.
+- **Grave em 4K** (Ajustes → Câmera → Gravar Vídeo → 4K30). A produção é nítida porque
+  tem resolução — 1080p deixa os gaussians "borrados". Vídeo na horizontal.
 - O prato inteiro sempre no enquadramento, com uma folga nas bordas.
 
 ## Resumo (o "checklist")

@@ -4,7 +4,7 @@ frames:
   fps: 3              # frames per second to extract from the video
   max_frames: 150     # hard cap (uniformly subsampled if exceeded)
   blur_threshold: 40.0  # min Laplacian variance; frames below are discarded as blurry
-  max_dim: 1920       # train at full 1080p source res for finer gaussians (prod = sharper)
+  max_dim: 2560       # keep lots of the 4K detail (finer gaussians = sharper, like prod)
 
 mask:
   mode: birefnet           # birefnet (AI saliency, drops the plate) | chroma (keep plate)
