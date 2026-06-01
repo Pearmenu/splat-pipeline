@@ -9,6 +9,18 @@ nítido, fundo liso e luz constante.
 > Pra ter VOLUME e ALTURA, é **obrigatório filmar de 3 alturas diferentes** (de cima,
 > meio e rasante). Isso é o item mais importante deste guia — não pule.
 
+## Ajustes do iPhone (Ajustes → Câmera, uma vez)
+- **Gravar Vídeo: 1080p HD a 30 fps** (4K é desperdício — a esteira reduz p/ 1600px).
+- **Formatos → "Mais Compatível"** (H.264, evita o HEVC do iPhone).
+- **Vídeo HDR / Dolby Vision: DESLIGADO.**
+- **Grade: LIGADA.** · **Lens Correction: LIGADA.**
+
+## No app Câmera, antes de gravar
+- Modo VÍDEO, **lente 1x principal** (nunca 0,5x ultra-wide nem telefoto).
+- **Toque e segure no prato até "AE/AF LOCK"** (trava foco+exposição — crítico, senão
+  a câmera desfoca no meio da volta).
+- Prato ocupando ~60–70% da tela, com folga.
+
 ## Montagem
 
 - **Bandeja giratória** (dessas de bolo / "lazy susan") com o prato no centro.
