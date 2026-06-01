@@ -35,7 +35,7 @@ STAGES = [
 class Paths:
     """Canonical layout of the work directory, shared across stages."""
 
-    def __init__(self, workdir: Path, video: Path):
+    def __init__(self, workdir: Path, video: Path, name: str = None):
         self.workdir = workdir
         self.video = video
         self.raw_frames = workdir / "frames" / "raw"      # ffmpeg output
@@ -46,9 +46,17 @@ class Paths:
         self.train = workdir / "train"                    # gsplat result dir
         self.raw_ply = workdir / "train" / "model_raw.ply"   # exported from ckpt
         self.out = workdir / "out"
-        self.clean_ply = workdir / "out" / "model_clean.ply"
-        self.out_splat = workdir / "out" / "model.splat"
-        self.out_ply = workdir / "out" / "model.ply"
+        self.clean_ply = self.out / "model_clean.ply"     # intermediate (fixed name)
+
+        # Final outputs are named after the dish (or the video) + an auto-incrementing
+        # number, so every test keeps its own file instead of overwriting.
+        base = (name or video.stem)
+        n = 1
+        while ((self.out / f"{base}_{n:02d}.splat").exists()
+               or (self.out / f"{base}_{n:02d}.ply").exists()):
+            n += 1
+        self.out_splat = self.out / f"{base}_{n:02d}.splat"
+        self.out_ply = self.out / f"{base}_{n:02d}.ply"
 
         for d in (self.raw_frames, self.images, self.masks, self.colmap,
                   self.train, self.out):
@@ -60,6 +68,8 @@ def main():
     ap.add_argument("--video", required=True, type=Path, help="input video file")
     ap.add_argument("--workdir", required=True, type=Path, help="work/output directory")
     ap.add_argument("--config", type=Path, default=Path(__file__).parent / "config.yaml")
+    ap.add_argument("--name", help="base name for the output file (default: video name); "
+                                   "a number is appended so tests never overwrite")
     ap.add_argument("--from-stage", choices=[s[0] for s in STAGES],
                     help="resume starting at this stage (assumes earlier outputs exist)")
     args = ap.parse_args()
@@ -68,7 +78,7 @@ def main():
         sys.exit(f"video not found: {args.video}")
 
     cfg = yaml.safe_load(args.config.read_text())
-    paths = Paths(args.workdir, args.video)
+    paths = Paths(args.workdir, args.video, args.name)
 
     start_idx = 0
     if args.from_stage:
