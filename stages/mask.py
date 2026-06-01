@@ -1,32 +1,26 @@
-"""Stage 2 — recortar o prato do fundo (a chave do arquivo limpo).
+"""Stage 2 — recortar prato+comida do fundo (a chave do arquivo limpo).
 
-For each frame we run rembg (salient-object matting, no prompt needed) to get an
-alpha matte, harden + erode it to kill edge fringe, then:
-  - write the subject composited onto BLACK to frames/images/  (used for training
-    and SfM — a uniform background reconstructs as an easily-pruned black void)
-  - write a binary mask to frames/masks/  named "<image>.png.png" so COLMAP
-    ignores background features (its mask convention is <image_name> + ".png").
+Two masking modes (config `mask.mode`):
+  - birefnet (default): rembg salient-object matting. Great for the FOOD, but it
+    treats a flat/glossy PLATE as background and drops it.
+  - chroma: key out a solid background color (auto-sampled from the frame corners,
+    or given explicitly via `chroma_color`). KEEPS the plate — use this when you
+    film on a solid contrasting backdrop + base (green is safest: plates/food are
+    rarely green). This is the reliable, production mode.
+
+Both paths then: close gaps -> keep largest blob -> fill holes -> optional
+dilate/erode, composite the subject onto BLACK (for training + SfM) and write a
+COLMAP mask (filename = imagename + ".png", 0 = ignore).
 """
 from pathlib import Path
 
 import cv2
 import numpy as np
-from PIL import Image
-from rembg import new_session, remove
 from tqdm import tqdm
 
 
-def _refine_mask(alpha, mcfg):
-    """Turn the BiRefNet alpha into a clean PLATE+FOOD mask.
-
-    BiRefNet gives the food high confidence but the flat/glossy plate LOW
-    confidence, so a 127 threshold cuts the plate off. We threshold low to catch
-    the plate, close gaps so plate+food fuse into one blob, keep only the largest
-    blob (drops stray background), fill interior holes, then grow a touch.
-    """
-    thr = int(mcfg.get("threshold", 40))
-    binary = (alpha > thr).astype(np.uint8)
-
+def _clean_binary(binary, mcfg):
+    """Close gaps, keep the largest blob, fill holes, optional grow/shrink."""
     close_px = int(mcfg.get("close_px", 7))
     if close_px > 0:
         k = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (close_px * 2 + 1,) * 2)
@@ -42,8 +36,8 @@ def _refine_mask(alpha, mcfg):
         h, w = binary.shape
         ff = (binary * 255).astype(np.uint8)
         m = np.zeros((h + 2, w + 2), np.uint8)
-        cv2.floodFill(ff, m, (0, 0), 255)        # flood background from a corner
-        holes = (ff == 0).astype(np.uint8)        # what's still 0 = interior holes
+        cv2.floodFill(ff, m, (0, 0), 255)         # flood background from a corner
+        holes = (ff == 0).astype(np.uint8)         # what's still 0 = interior holes
         binary = (binary | holes).astype(np.uint8)
 
     dilate_px = int(mcfg.get("dilate_px", 0))
@@ -57,21 +51,42 @@ def _refine_mask(alpha, mcfg):
     return binary
 
 
+def _bg_color(rgb, mcfg):
+    """Background color for chroma keying: explicit [r,g,b] or median of the corners."""
+    c = mcfg.get("chroma_color", "auto")
+    if c not in (None, "auto"):
+        return np.array(c, dtype=np.float32)
+    h, w, _ = rgb.shape
+    s = max(8, min(h, w) // 20)
+    corners = np.concatenate([
+        rgb[:s, :s].reshape(-1, 3), rgb[:s, -s:].reshape(-1, 3),
+        rgb[-s:, :s].reshape(-1, 3), rgb[-s:, -s:].reshape(-1, 3),
+    ])
+    return np.median(corners.astype(np.float32), axis=0)
+
+
 def run(cfg, paths):
     mcfg = cfg["mask"]
-    # Prefer the GPU — BiRefNet on CPU is ~40s/frame; on GPU it's <1s/frame.
-    # If onnxruntime can't load the CUDA provider it silently falls back to CPU.
-    providers = (["CUDAExecutionProvider", "CPUExecutionProvider"]
-                 if mcfg.get("use_gpu", True) else ["CPUExecutionProvider"])
-    session = new_session(mcfg["model"], providers=providers)
-    try:
-        active = session.inner_session.get_providers()
-        print(f"   rembg providers ativos: {active}")
-        if "CUDAExecutionProvider" not in active:
-            print("   ⚠️  recorte na CPU (lento). Verifique onnxruntime-gpu/LD_LIBRARY_PATH.")
-    except Exception:
-        pass
+    mode = mcfg.get("mode", "birefnet")
     min_area = float(mcfg["min_area_ratio"])
+    print(f"   modo de máscara: {mode}")
+
+    session = None
+    remove = Image = None
+    if mode == "birefnet":
+        from rembg import new_session, remove as _remove
+        from PIL import Image as _Image
+        remove, Image = _remove, _Image
+        providers = (["CUDAExecutionProvider", "CPUExecutionProvider"]
+                     if mcfg.get("use_gpu", True) else ["CPUExecutionProvider"])
+        session = new_session(mcfg["model"], providers=providers)
+        try:
+            active = session.inner_session.get_providers()
+            print(f"   rembg providers ativos: {active}")
+            if "CUDAExecutionProvider" not in active:
+                print("   ⚠️  recorte na CPU (lento). Verifique onnxruntime-gpu/LD_LIBRARY_PATH.")
+        except Exception:
+            pass
 
     for d in (paths.images, paths.masks):
         for f in d.glob("*.png"):
@@ -80,20 +95,23 @@ def run(cfg, paths):
     frames = sorted(paths.raw_frames.glob("*.png"))
     kept = 0
     for f in tqdm(frames, desc="   mask", unit="frame"):
-        rgba = remove(Image.open(f).convert("RGB"), session=session)  # PIL RGBA
-        rgba = np.asarray(rgba)
-        rgb, alpha = rgba[..., :3], rgba[..., 3]
+        rgb = cv2.cvtColor(cv2.imread(str(f)), cv2.COLOR_BGR2RGB)
 
-        binary = _refine_mask(alpha, mcfg)
+        if mode == "chroma":
+            bg = _bg_color(rgb, mcfg)
+            tol = float(mcfg.get("chroma_tol", 60))
+            dist = np.linalg.norm(rgb.astype(np.float32) - bg, axis=2)
+            raw = (dist > tol).astype(np.uint8)            # keep what's NOT the background
+        else:
+            rgba = np.asarray(remove(Image.fromarray(rgb), session=session))
+            raw = (rgba[..., 3] > int(mcfg.get("threshold", 40))).astype(np.uint8)
 
-        area_ratio = binary.mean()
-        if area_ratio < min_area:
-            continue  # subject too small / matting failed for this frame
+        binary = _clean_binary(raw, mcfg)
+        if binary.mean() < min_area:
+            continue  # subject too small / keying failed for this frame
 
         composited = rgb * binary[..., None]  # black background
-        cv2.imwrite(str(paths.images / f.name),
-                    cv2.cvtColor(composited, cv2.COLOR_RGB2BGR))
-        # COLMAP mask: filename = imagename + ".png", 0 = ignore, 255 = use
+        cv2.imwrite(str(paths.images / f.name), cv2.cvtColor(composited, cv2.COLOR_RGB2BGR))
         cv2.imwrite(str(paths.masks / (f.name + ".png")), binary * 255)
         kept += 1
 

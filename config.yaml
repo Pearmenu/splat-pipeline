@@ -7,6 +7,11 @@ frames:
   max_dim: 1600       # downscale long edge to this (0 = keep original). Big speedup.
 
 mask:
+  mode: birefnet           # birefnet (AI saliency, drops the plate) | chroma (keep plate)
+  # --- chroma mode (use with a solid GREEN backdrop+base; keeps the plate) ---
+  chroma_color: auto       # "auto" = sample the frame corners, or [r,g,b]
+  chroma_tol: 70           # color distance to count as foreground (raise if base bleeds in)
+  # --- birefnet mode ---
   model: birefnet-general  # rembg model: birefnet-general | isnet-general-use | u2net
   use_gpu: true            # run BiRefNet on the GPU (CPU is ~40x slower)
   threshold: 40            # alpha cutoff (LOW, so the low-confidence PLATE is kept)
