@@ -29,7 +29,7 @@ sfm:
 
 train:
   iters: 30000             # more iterations = denser, more SOLID (less translucent)
-  cap_max: 1000000         # MCMC gaussian budget — more = denser/less see-through (bigger file)
+  cap_max: 300000          # MCMC budget — production uses ~72k after cleanup, so 300k is plenty
   sh_degree: 3
   data_factor: 1           # downscale factor for training images (1 = full res)
 
