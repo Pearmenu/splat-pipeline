@@ -33,7 +33,8 @@ def _adjust_color(rgb, brightness=1.0, contrast=1.0, saturation=1.0):
     return rgb
 
 
-def ply_to_splat(ply_path, splat_path, brightness=1.0, contrast=1.0, saturation=1.0):
+def ply_to_splat(ply_path, splat_path, brightness=1.0, contrast=1.0,
+                 saturation=1.0, opacity_boost=1.0):
     v = PlyData.read(str(ply_path))["vertex"]
 
     xyz = np.stack([v["x"], v["y"], v["z"]], axis=1).astype(np.float32)
@@ -46,6 +47,8 @@ def ply_to_splat(ply_path, splat_path, brightness=1.0, contrast=1.0, saturation=
     rgb = 0.5 + SH_C0 * f_dc
     rgb = np.clip(_adjust_color(rgb, brightness, contrast, saturation), 0.0, 1.0)
     alpha = _sigmoid(v["opacity"].astype(np.float32))
+    if opacity_boost != 1.0:  # push semi-transparent gaussians toward opaque (kills the "see-through" look)
+        alpha = np.clip(alpha * opacity_boost, 0.0, 1.0)
     rgba = np.clip(np.concatenate([rgb, alpha[:, None]], axis=1) * 255, 0, 255).astype(np.uint8)
 
     rot_u8 = np.clip(quat * 128 + 128, 0, 255).astype(np.uint8)
@@ -76,6 +79,7 @@ def run(cfg, paths):
             brightness=ecfg.get("brightness", 1.0),
             contrast=ecfg.get("contrast", 1.0),
             saturation=ecfg.get("saturation", 1.0),
+            opacity_boost=ecfg.get("opacity_boost", 1.0),
         )
         mb = paths.out_splat.stat().st_size / 1e6
         print(f"   wrote {paths.out_splat.name}: {n} gaussians, {mb:.1f} MB")

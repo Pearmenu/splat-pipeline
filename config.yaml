@@ -29,7 +29,7 @@ sfm:
 
 train:
   iters: 30000             # more iterations = denser, more SOLID (less translucent)
-  cap_max: 300000          # MCMC gaussian budget (final file size scales with this)
+  cap_max: 1000000         # MCMC gaussian budget — more = denser/less see-through (bigger file)
   sh_degree: 3
   data_factor: 1           # downscale factor for training images (1 = full res)
 
@@ -37,7 +37,7 @@ cleanup:
   # The background/turntable is already gone (masked black), so cleanup only needs
   # to kill stray floaters/fog — NOT crop the object. Keep it gentle so the PLATE
   # under the food survives (its flat rim sits at the spatial extremes).
-  opacity_min: 0.05        # drop gaussians more transparent than this
+  opacity_min: 0.08        # drop gaussians more transparent than this (faint fog)
   scale_max_pct: 99.9      # drop gaussians larger than this percentile (kills blobs)
   bbox_pct: [0.1, 99.9]    # very gentle spatial crop (keeps the plate rim)
   knn_k: 16                # neighbors for statistical outlier removal
@@ -49,3 +49,4 @@ export:
   brightness: 1.05
   contrast: 1.18
   saturation: 1.35
+  opacity_boost: 2.0       # >1 makes gaussians more opaque (fixes the "see-through" food)
