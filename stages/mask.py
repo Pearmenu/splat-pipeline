@@ -88,6 +88,15 @@ def run(cfg, paths):
         except Exception:
             pass
 
+    sam_model = None
+    if mode == "sam":
+        # Object-aware segmentation: we prompt SAM with a box around the center
+        # (turntable = dish centered) so it returns the WHOLE object — plate + food —
+        # instead of just the salient food. This is the "teach it it's a plate" path.
+        from ultralytics import SAM
+        sam_model = SAM(mcfg.get("sam_model", "sam2.1_b.pt"))
+        print(f"   SAM model: {mcfg.get('sam_model', 'sam2.1_b.pt')}")
+
     for d in (paths.images, paths.masks):
         for f in d.glob("*.png"):
             f.unlink()
@@ -102,6 +111,15 @@ def run(cfg, paths):
             tol = float(mcfg.get("chroma_tol", 60))
             dist = np.linalg.norm(rgb.astype(np.float32) - bg, axis=2)
             raw = (dist > tol).astype(np.uint8)            # keep what's NOT the background
+        elif mode == "sam":
+            h, w = rgb.shape[:2]
+            mg = float(mcfg.get("sam_box_margin", 0.12))
+            box = [w * mg, h * mg, w * (1 - mg), h * (1 - mg)]  # central box = "the object is here"
+            res = sam_model(rgb, bboxes=[box], verbose=False)
+            if res and res[0].masks is not None and len(res[0].masks.data):
+                raw = (res[0].masks.data[0].cpu().numpy() > 0.5).astype(np.uint8)
+            else:
+                raw = np.zeros(rgb.shape[:2], np.uint8)
         else:
             rgba = np.asarray(remove(Image.fromarray(rgb), session=session))
             raw = (rgba[..., 3] > int(mcfg.get("threshold", 40))).astype(np.uint8)

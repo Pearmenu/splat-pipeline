@@ -1,6 +1,7 @@
 # Torch/CUDA come from the base image (see Dockerfile).
 # gsplat is installed separately in the Dockerfile (needs CUDA toolchain to build).
 
+ultralytics          # SAM (object-aware masking that keeps the plate)
 rembg==2.0.59
 # Pin to a build that matches the pod's CUDA 12.x + cuDNN 9 (torch 2.4). The latest
 # onnxruntime-gpu (1.26) needs newer CUDA and fails to load -> masking falls over.

@@ -7,8 +7,11 @@ frames:
   max_dim: 2560       # keep lots of the 4K detail (finer gaussians = sharper, like prod)
 
 mask:
-  mode: birefnet           # birefnet (AI saliency, drops the plate) | chroma (keep plate)
-  # --- chroma mode (use with a solid GREEN backdrop+base; keeps the plate) ---
+  mode: sam                # sam (object-aware, KEEPS the plate) | birefnet | chroma
+  # --- sam mode (no green screen needed; prompts SAM with a central box) ---
+  sam_model: sam2.1_b.pt   # ultralytics SAM checkpoint (auto-downloads ~150 MB)
+  sam_box_margin: 0.12     # box prompt = central (1 - 2*margin) of the frame; lower = bigger box
+  # --- chroma mode (use with a solid GREEN backdrop+base) ---
   chroma_color: auto       # "auto" = sample the frame corners, or [r,g,b]
   chroma_tol: 70           # color distance to count as foreground (raise if base bleeds in)
   # --- birefnet mode ---
