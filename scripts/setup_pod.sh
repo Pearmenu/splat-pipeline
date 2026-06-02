@@ -21,7 +21,7 @@ if ! command -v micromamba >/dev/null 2>&1; then
 fi
 # Isolated prefix so it never shadows the pod's Python/torch. We append (not
 # prepend) its bin to PATH, so only `colmap`/`glomap` resolve from here.
-micromamba create -y -p "$PREFIX" -c conda-forge colmap glomap
+micromamba create -y -p "$PREFIX" -c conda-forge colmap glomap libfaiss
 export PATH="$PATH:$PREFIX/bin"
 grep -q "$PREFIX/bin" ~/.bashrc 2>/dev/null || echo "export PATH=\$PATH:$PREFIX/bin" >> ~/.bashrc
 
