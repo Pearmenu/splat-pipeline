@@ -21,7 +21,10 @@ if ! command -v micromamba >/dev/null 2>&1; then
 fi
 # Isolated prefix so it never shadows the pod's Python/torch. We append (not
 # prepend) its bin to PATH, so only `colmap`/`glomap` resolve from here.
-micromamba create -y -p "$PREFIX" -c conda-forge colmap glomap libfaiss
+# Pin COLMAP to the 3.x line: the conda-forge 4.0.x build drags a broken
+# faiss->MKL runtime chain (libmkl_intel_lp64.so.2 missing). 3.11 is the stable,
+# self-contained build everyone uses for 3DGS.
+micromamba create -y -p "$PREFIX" -c conda-forge "colmap<4" glomap
 export PATH="$PATH:$PREFIX/bin"
 grep -q "$PREFIX/bin" ~/.bashrc 2>/dev/null || echo "export PATH=\$PATH:$PREFIX/bin" >> ~/.bashrc
 
