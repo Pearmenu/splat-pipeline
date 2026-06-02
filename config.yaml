@@ -7,7 +7,10 @@ frames:
   max_dim: 2560       # keep lots of the 4K detail (finer gaussians = sharper, like prod)
 
 mask:
-  mode: birefnet           # sam (object-aware, KEEPS the plate) | birefnet | chroma
+  mode: apriltag           # apriltag (PeAR scan mat — KEEPS plate, geometric) | birefnet | sam | chroma
+  # --- apriltag mode (PeAR scan mat: tags ring around the dish) ---
+  tag_family: tag36h11     # matches the mat (AprilTag 36h11)
+  dish_ratio: 1.0          # mask = ellipse through tag centers x this. >1 = include plate at/over the ring; tune by checking a frame
   # --- sam mode (no green screen needed; prompts SAM with a central box) ---
   sam_model: sam2.1_b.pt   # ultralytics SAM checkpoint (auto-downloads ~150 MB)
   sam_box_margin: 0.12     # box prompt = central (1 - 2*margin) of the frame; lower = bigger box
@@ -27,6 +30,7 @@ mask:
   min_area_ratio: 0.02     # discard frame if the subject covers less than this
 
 sfm:
+  use_mat: true            # SfM on the FULL frame (scan-mat tags = great features). Pair with mask.mode: apriltag
   use_glomap: true         # GLOMAP mapper (fast). false => colmap mapper (slower)
   camera_model: OPENCV
   matcher: sequential      # sequential (video frames) | exhaustive (robust, slower)

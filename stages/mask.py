@@ -62,6 +62,31 @@ def _clean_binary(binary, mcfg):
     return binary
 
 
+def _mask_apriltag(gray, detector, mcfg, last_ell):
+    """Geometric dish mask from the scan mat's AprilTag ring.
+
+    The tags sit on a known ring around the dish, so we fit an ellipse through the
+    detected tag centers (the ring, in perspective) and fill it (scaled by
+    dish_ratio) — everything inside = plate + food. Pure geometry: no AI guessing,
+    immune to the glossy-plate reflections. Carries the last ellipse forward on
+    frames where too few tags are visible, so every frame gets a clean mask.
+    """
+    h, w = gray.shape
+    res = detector.detect(gray)
+    ell = last_ell
+    if len(res) >= 5:
+        centers = np.array([r.center for r in res], dtype=np.float32)
+        ell = cv2.fitEllipse(centers)
+    if ell is None:  # nothing yet — fall back to a generous central ellipse
+        ell = ((w / 2.0, h / 2.0), (w * 0.6, h * 0.6), 0.0)
+    (cx, cy), (MA, ma), ang = ell
+    r = float(mcfg.get("dish_ratio", 1.0))
+    mask = np.zeros((h, w), np.uint8)
+    cv2.ellipse(mask, (int(cx), int(cy)), (int(MA / 2 * r), int(ma / 2 * r)),
+                ang, 0, 360, 1, -1)
+    return mask, ell
+
+
 def _bg_color(rgb, mcfg):
     """Background color for chroma keying: explicit [r,g,b] or median of the corners."""
     c = mcfg.get("chroma_color", "auto")
@@ -108,6 +133,13 @@ def run(cfg, paths):
         sam_model = SAM(mcfg.get("sam_model", "sam2.1_b.pt"))
         print(f"   SAM model: {mcfg.get('sam_model', 'sam2.1_b.pt')}")
 
+    detector = None
+    last_ell = None
+    if mode == "apriltag":
+        from pupil_apriltags import Detector
+        detector = Detector(families=mcfg.get("tag_family", "tag36h11"))
+        print("   apriltag: detector pronto (recorte geométrico pela base PeAR)")
+
     for d in (paths.images, paths.masks):
         for f in d.glob("*.png"):
             f.unlink()
@@ -131,6 +163,9 @@ def run(cfg, paths):
                 raw = (res[0].masks.data[0].cpu().numpy() > 0.5).astype(np.uint8)
             else:
                 raw = np.zeros(rgb.shape[:2], np.uint8)
+        elif mode == "apriltag":
+            gray = cv2.cvtColor(rgb, cv2.COLOR_RGB2GRAY)
+            raw, last_ell = _mask_apriltag(gray, detector, mcfg, last_ell)
         else:
             rgba = np.asarray(remove(Image.fromarray(rgb), session=session))
             raw = (rgba[..., 3] > int(mcfg.get("threshold", 40))).astype(np.uint8)

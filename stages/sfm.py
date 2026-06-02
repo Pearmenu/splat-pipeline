@@ -20,17 +20,24 @@ def run(cfg, paths):
     if db.exists():
         db.unlink()
 
-    # 1. Feature extraction (GPU SIFT), using masks so only the dish contributes.
-    _run([
+    # With the PeAR scan mat, the FULL frame (tags + mat texture) gives rock-solid
+    # features -> great poses, even for a glossy plate. So SfM runs on the RAW frames
+    # (no mask). Training still uses the masked dish-only images (same filenames),
+    # so gsplat reconstructs only the dish. Without the mat, fall back to masked SfM.
+    use_mat = scfg.get("use_mat", False)
+    img_dir = paths.raw_frames if use_mat else paths.images
+
+    # 1. Feature extraction (GPU SIFT by default in COLMAP).
+    fe = [
         "colmap", "feature_extractor",
         "--database_path", db,
-        "--image_path", paths.images,
-        "--ImageReader.mask_path", paths.masks,
+        "--image_path", img_dir,
         "--ImageReader.single_camera", 1,
         "--ImageReader.camera_model", scfg["camera_model"],
-        # NOTE: COLMAP uses the GPU for SIFT by default. Newer COLMAP builds
-        # (conda-forge 4.x) dropped the explicit --SiftExtraction.use_gpu flag.
-    ])
+    ]
+    if not use_mat:
+        fe += ["--ImageReader.mask_path", paths.masks]
+    _run(fe)
 
     # 2. Matching. Sequential is ideal for video frames; exhaustive is more robust.
     matcher = {
@@ -49,14 +56,14 @@ def run(cfg, paths):
         _run([
             "glomap", "mapper",
             "--database_path", db,
-            "--image_path", paths.images,
+            "--image_path", img_dir,
             "--output_path", sparse_root,
         ])
     else:
         _run([
             "colmap", "mapper",
             "--database_path", db,
-            "--image_path", paths.images,
+            "--image_path", img_dir,
             "--output_path", sparse_root,
         ])
 
