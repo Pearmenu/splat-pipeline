@@ -4,14 +4,23 @@ COLMAP extracts + matches features (masked, so background is ignored), then
 GLOMAP solves the global reconstruction (much faster than COLMAP's incremental
 mapper). Output is a sparse model in colmap/sparse/0 that gsplat reads directly.
 """
+import os
 import shutil
 import subprocess
 from pathlib import Path
 
+# COLMAP/GLOMAP come from the micromamba prefix; their shared libs (libfaiss, etc.)
+# live in <prefix>/lib, which isn't on LD_LIBRARY_PATH. Add it ONLY for these
+# subprocess calls so it doesn't clash with torch's libs in the training stage.
+_COLMAP_LIB = "/opt/splattools/lib"
+
 
 def _run(cmd):
     print("   $", " ".join(str(c) for c in cmd))
-    subprocess.run([str(c) for c in cmd], check=True)
+    env = os.environ.copy()
+    if os.path.isdir(_COLMAP_LIB):
+        env["LD_LIBRARY_PATH"] = _COLMAP_LIB + os.pathsep + env.get("LD_LIBRARY_PATH", "")
+    subprocess.run([str(c) for c in cmd], check=True, env=env)
 
 
 def run(cfg, paths):
