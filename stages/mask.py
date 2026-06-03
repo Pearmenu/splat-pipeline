@@ -166,6 +166,8 @@ def run(cfg, paths):
         elif mode == "apriltag":
             gray = cv2.cvtColor(rgb, cv2.COLOR_RGB2GRAY)
             raw, last_ell = _mask_apriltag(gray, detector, mcfg, last_ell)
+        elif mode == "none":
+            raw = np.ones(rgb.shape[:2], np.uint8)  # no mask: keep the full frame (3D ground removal handles it)
         else:
             rgba = np.asarray(remove(Image.fromarray(rgb), session=session))
             raw = (rgba[..., 3] > int(mcfg.get("threshold", 40))).astype(np.uint8)

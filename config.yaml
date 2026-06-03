@@ -7,7 +7,7 @@ frames:
   max_dim: 2560       # keep lots of the 4K detail (finer gaussians = sharper, like prod)
 
 mask:
-  mode: apriltag           # apriltag (PeAR scan mat — KEEPS plate, geometric) | birefnet | sam | chroma
+  mode: none               # none (no 2D mask; 3D ground-plane removal in cleanup) | apriltag | birefnet | sam | chroma
   # --- apriltag mode (PeAR scan mat: tags ring around the dish) ---
   tag_family: tag36h11     # matches the mat (AprilTag 36h11)
   dish_ratio: 1.0          # mask = ellipse through tag centers x this. >1 = include plate at/over the ring; tune by checking a frame
@@ -42,9 +42,13 @@ train:
   data_factor: 1           # downscale factor for training images (1 = full res)
 
 cleanup:
-  # The background/turntable is already gone (masked black), so cleanup only needs
-  # to kill stray floaters/fog — NOT crop the object. Keep it gentle so the PLATE
-  # under the food survives (its flat rim sits at the spatial extremes).
+  # 3D ground-plane removal (for mask.mode: none + scan mat): fit the dominant
+  # plane (the mat) and keep only the dish above it. Sizes are fractions of the
+  # mat radius — tune by re-running `--from-stage cleanup` (instant, no retrain).
+  ground_removal: true
+  ground_band: 0.03        # skip the mat slab (height < this*matR is "the mat")
+  dish_height: 0.8         # keep up to this*matR above the mat (cuts the backdrop)
+  dish_radius: 1.05        # keep within this*matR of the mat center (cuts far stuff)
   opacity_min: 0.08        # drop gaussians more transparent than this (faint fog)
   scale_max_pct: 99.9      # drop gaussians larger than this percentile (kills blobs)
   bbox_pct: [0.1, 99.9]    # very gentle spatial crop (keeps the plate rim)
