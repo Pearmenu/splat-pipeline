@@ -7,7 +7,7 @@ frames:
   max_dim: 2560       # keep lots of the 4K detail (finer gaussians = sharper, like prod)
 
 mask:
-  mode: none               # none (no 2D mask; 3D ground-plane removal in cleanup) | apriltag | birefnet | sam | chroma
+  mode: birefnet           # voltou pro provado (comida limpa)
   # --- apriltag mode (PeAR scan mat: tags ring around the dish) ---
   tag_family: tag36h11     # matches the mat (AprilTag 36h11)
   dish_ratio: 1.0          # mask = ellipse through tag centers x this. >1 = include plate at/over the ring; tune by checking a frame
@@ -30,7 +30,7 @@ mask:
   min_area_ratio: 0.02     # discard frame if the subject covers less than this
 
 sfm:
-  use_mat: true            # SfM on the FULL frame (scan-mat tags = great features). Pair with mask.mode: apriltag
+  use_mat: false           # SfM nas imagens mascaradas (comida) — provado
   use_glomap: true         # GLOMAP mapper (fast). false => colmap mapper (slower)
   camera_model: OPENCV
   matcher: sequential      # sequential (video frames) | exhaustive (robust, slower)
@@ -45,7 +45,7 @@ cleanup:
   # 3D ground-plane removal (for mask.mode: none + scan mat): fit the dominant
   # plane (the mat) and keep only the dish above it. Sizes are fractions of the
   # mat radius — tune by re-running `--from-stage cleanup` (instant, no retrain).
-  ground_removal: true
+  ground_removal: false    # OFF (quebrava a cena com a base)
   ground_band: 0.03        # skip the mat slab (height < this*matR is "the mat")
   dish_height: 0.8         # keep up to this*matR above the mat (cuts the backdrop)
   dish_radius: 1.05        # keep within this*matR of the mat center (cuts far stuff)
