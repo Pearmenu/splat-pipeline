@@ -74,9 +74,16 @@ def _mask_apriltag(gray, detector, mcfg, last_ell):
     h, w = gray.shape
     res = detector.detect(gray)
     ell = last_ell
-    if len(res) >= 5:
+    if len(res) >= int(mcfg.get("min_tags", 5)):
         centers = np.array([r.center for r in res], dtype=np.float32)
-        ell = cv2.fitEllipse(centers)
+        new = cv2.fitEllipse(centers)
+        if last_ell is None:
+            ell = new
+        else:
+            # reject a fit whose center jumps too far (bad one-sided tag arc),
+            # so a generous ellipse never suddenly slides off the dish
+            jump = np.hypot(new[0][0] - last_ell[0][0], new[0][1] - last_ell[0][1])
+            ell = new if jump < float(mcfg.get("max_jump", 0.2)) * w else last_ell
     if ell is None:  # nothing yet — fall back to a generous central ellipse
         ell = ((w / 2.0, h / 2.0), (w * 0.6, h * 0.6), 0.0)
     (cx, cy), (MA, ma), ang = ell
